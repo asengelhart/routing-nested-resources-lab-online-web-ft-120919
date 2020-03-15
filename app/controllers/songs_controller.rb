@@ -1,10 +1,35 @@
 class SongsController < ApplicationController
   def index
-    @songs = Song.all
+    if params[:artist_id]
+      artist = Artist.includes(:songs).find_by(id: params[:artist_id])
+      if artist.nil?
+        flash[:alert] = "Artist not found"
+        redirect_to artists_path
+      else
+        @songs = artist.songs
+      end
+    else
+      @songs = Song.all
+    end
   end
 
   def show
-    @song = Song.find(params[:id])
+    # Ideally, I would prefer to redirect to the songs index when any invalid song id is
+    # passed, but that's not what the spec calls for here
+
+    @song = Song.find_by(id: params[:id])
+    artist = params[:artist_id] ? Artist.find_by(id: params[:artist_id]) : nil
+    if artist.nil?
+      if @song.nil?
+        flash[:alert] = "Song not found."
+        redirect_to songs_path
+      end
+    else
+      if @song.nil? || artist.songs.include?(@song) == false
+        flash[:alert] = "Song not found."
+        redirect_to artist_songs_path(artist.id)
+      end
+    end
   end
 
   def new
